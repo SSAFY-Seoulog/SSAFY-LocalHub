@@ -1,5 +1,6 @@
 <script setup>
 import { RouterLink, RouterView } from 'vue-router'
+import ChatWidget from './components/ChatWidget.vue'
 </script>
 
 <template>
@@ -34,5 +35,8 @@ import { RouterLink, RouterView } from 'vue-router'
         <div class="copyright">© 2024 Seoulog. 공공데이터포털 및 서울열린데이터광장 데이터 라이선스를 준수합니다.</div>
       </div>
     </footer>
+
+    <!-- 플로팅 AI 챗봇 위젯 (모든 페이지 공통) -->
+    <ChatWidget />
   </div>
 </template>
