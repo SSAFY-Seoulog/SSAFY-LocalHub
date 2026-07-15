@@ -7,7 +7,7 @@
         <p class="hero-text">신뢰할 수 있는 데이터와 AI 기술을 통해 서울의 숨겨진 매력을 발견하고, 당신만의 특별한 여행을 계획해 보세요.</p>
         <div class="hero-actions">
           <RouterLink to="/map" class="btn">지도 보기</RouterLink>
-          <button class="btn btn-secondary">여정 시작하기</button>
+          <RouterLink to="/chat" class="btn btn-secondary">여정 시작하기</RouterLink>
         </div>
       </div>
     </section>
