@@ -15,8 +15,7 @@ import ChatWidget from './components/ChatWidget.vue'
           <RouterLink to="/">홈</RouterLink>
           <RouterLink to="/map">여행지도</RouterLink>
           <RouterLink to="/board">여행톡</RouterLink>
-          <RouterLink to="/chat">AI 가이드</RouterLink>
-          <RouterLink to="/dashboard">대시보드</RouterLink>
+          <RouterLink to="/chat">AI 코스</RouterLink>
         </nav>
         <RouterLink to="/map" class="header-cta">서울 탐색하기</RouterLink>
       </div>
