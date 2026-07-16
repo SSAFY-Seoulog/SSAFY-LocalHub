@@ -1,7 +1,7 @@
 import { ref } from 'vue'
 
 /**
- * Seoulog AI 챗봇 공용 로직 (플로팅 위젯 + 챗봇 페이지 공유)
+ * LocalHub AI 챗봇 공용 로직 (플로팅 위젯 + 챗봇 페이지 공유)
  *
  * 동작 방식
  * 1. public/data 의 서울 권역 JSON 7종을 최초 질문 시 1회 로드해 캐시
@@ -54,7 +54,7 @@ function initialGreeting() {
   return {
     role: 'assistant',
     content:
-      '안녕하세요! 서울 지역 정보 가이드 Seoulog AI입니다. 관광지·문화시설·축제·여행코스·레포츠·숙박·쇼핑 정보와 커뮤니티 게시글 검색을 도와드려요. 무엇이 궁금하세요?'
+      '안녕하세요! 서울 지역 정보 가이드 LocalHub AI입니다. 관광지·문화시설·축제·여행코스·레포츠·숙박·쇼핑 정보와 커뮤니티 게시글 검색을 도와드려요. 무엇이 궁금하세요?'
   }
 }
 
@@ -81,7 +81,7 @@ async function loadAllData() {
           tel: item.tel || ''
         }))
       } catch (e) {
-        console.error(`[Seoulog] 데이터 로드 실패: ${src.file}`, e)
+        console.error(`[LocalHub] 데이터 로드 실패: ${src.file}`, e)
         return []
       }
     })
@@ -165,7 +165,7 @@ function buildContext(places, posts) {
   return lines.join('\n')
 }
 
-const SYSTEM_PROMPT = `너는 서울 지역 정보 커뮤니티 'Seoulog'의 AI 가이드다.
+const SYSTEM_PROMPT = `너는 서울 지역 정보 커뮤니티 'LocalHub'의 AI 가이드다.
 규칙:
 1. 반드시 함께 제공되는 [검색 결과] 데이터에 근거해서만 장소·행사를 안내한다. 데이터에 없는 장소를 지어내지 않는다.
 2. 검색 결과가 없거나 부족하면 솔직하게 "제공 데이터에서 찾지 못했다"고 안내하고, 다른 질문 방법을 제안한다.

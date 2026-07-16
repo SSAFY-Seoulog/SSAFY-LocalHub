@@ -1,6 +1,6 @@
-# Seoulog
+# LocalHub
 
-Seoulog는 서울 관광 정보를 지도, 커뮤니티, AI 챗봇으로 탐색할 수 있는 Vue 기반 웹 애플리케이션입니다. 공공 관광 JSON 데이터를 브라우저에서 직접 읽어 지도와 AI 검색 컨텍스트로 활용하고, 커뮤니티 게시글은 `localStorage`에 저장합니다.
+LocalHub는 서울 관광 정보를 지도, 커뮤니티, AI 챗봇으로 탐색할 수 있는 Vue 기반 웹 애플리케이션입니다. 공공 관광 JSON 데이터를 브라우저에서 직접 읽어 지도와 AI 검색 컨텍스트로 활용하고, 커뮤니티 게시글은 `localStorage`에 저장합니다.
 
 ## 주요 목적
 
@@ -72,7 +72,7 @@ VITE_KAKAO_JS_KEY=
 
 ### 홈
 
-- Seoulog 브랜드 소개
+- LocalHub 브랜드 소개
 - `지도 보기` 버튼으로 `/map` 이동
 - `게시판 둘러보기` 버튼으로 `/board` 이동
 - Toss 스타일에 가까운 밝은 배경, 큰 타이포그래피, 둥근 버튼, 부드러운 그림자 적용
@@ -141,7 +141,7 @@ VITE_KAKAO_JS_KEY=
 
 `ChatView.vue`에서 전체 화면형 AI 가이드를 제공합니다.
 
-- Seoulog AI 가이드 대화 화면
+- LocalHub AI 가이드 대화 화면
 - 메시지 입력 및 Enter 전송
 - 전송 버튼 비활성화 상태 처리
 - 로딩 중 점 애니메이션 표시
@@ -206,8 +206,8 @@ AI 챗봇은 각 데이터에서 `title`, `addr1`, `tel`을 추출해 검색 컨
 
 | 위치 | 아이콘/요소 | 용도 |
 | --- | --- | --- |
-| `public/favicon.svg` | Seoulog `S` 심볼 | 브라우저 탭 favicon |
-| 헤더 | `Seoulog` 텍스트 로고 | 브랜드 표시 |
+| `public/favicon.svg` | LocalHub `S` 심볼 | 브라우저 탭 favicon |
+| 헤더 | `LocalHub` 텍스트 로고 | 브랜드 표시 |
 | 게시판 글쓰기 버튼 | `✏️` | 새 게시글 작성 액션 |
 | 플로팅 챗봇 버튼 | `💬` | 챗봇 열기 |
 | 챗봇 초기화 버튼 | `↺` | 대화 초기화 |
