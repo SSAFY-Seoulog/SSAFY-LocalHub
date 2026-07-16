@@ -6,7 +6,7 @@
         <h1>서울 여행자들의 생생한 이야기 💬</h1>
         <p>직접 다녀온 장소와 나만 알고 싶은 서울의 팁을 나눠보세요.</p>
       </div>
-      <div class="board-count"><strong>{{ posts.length }}</strong><span>개의 여행 이야기</span></div>
+      
     </header>
 
     <!-- 🏆 BEST 여행 이야기 (좋아요 상위 3개) - 목록 화면일 때만 노출 -->
@@ -56,8 +56,8 @@
     </section>
 
     <!-- 글 상세 보기 -->
-    <section v-else-if="selectedPost" class="card detail-section">
-      <button class="back-button" type="button" @click="selectedPost = null">← 목록으로</button>
+    <template v-else-if="selectedPost">
+      <section class="card detail-section">
       <div class="detail-header">
         <span class="badge">{{ selectedPost.category }}</span>
         <h1>{{ selectedPost.title }}</h1>
@@ -80,9 +80,14 @@
 
       <div class="detail-actions">
         <span class="detail-note">여행 정보가 도움이 되었나요? 좋은 이야기를 함께 나눠주세요.</span>
-        <div><button @click="openAuthModal('edit')" class="action-button">수정</button><button @click="openAuthModal('delete')" class="action-button danger">삭제</button></div>
+        <div><button @click="openAuthModal('edit')" class="action-button">수정</button><button @click="openAuthModal('delete')" class="action-button danger">삭제</button></div></div>
+      </section>
+      <div class="detail-back-footer">
+        <button class="back-to-list-button" type="button" @click="selectedPost = null">
+          <span aria-hidden="true">←</span> 목록으로 돌아가기
+        </button>
       </div>
-    </section>
+    </template>
 
     <!-- 글 목록 (리스트) -->
     <section v-else class="board-list">
@@ -534,29 +539,34 @@ textarea.form-control { min-height:150px; padding:13px; resize:vertical; line-he
 }
 
 /* 💡 margin-left: auto를 주어 검색창을 전체 레이아웃 우측 끝으로 밀어냅니다. */
-.search-box { 
-  display: flex; 
-  gap: 8px; 
-  width: 100%; 
-  max-width: 500px; 
-  margin-left: auto; 
+.search-box {
+  display: flex;
+  flex: 1 1 auto;
+  gap: 8px;
+  width: auto;
+  max-width: none;
+  min-width: 0;
+  margin-left: 0;
 }
 
-.search-input { 
-  min-height: 46px; 
-  flex-grow: 1; /* 검색창이 주어진 max-width 내에서 꽉 차도록 설정 */
+.search-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 48px;
 }
 
-.search-btn { 
-  flex-shrink: 0; 
-  padding: 0 18px; 
-  background: #4e5968; 
-  color: #fff; 
-  border: 0; 
-  border-radius: 8px; 
-  font-weight: 700; 
-  cursor: pointer; 
-  transition: background 0.15s; 
+.search-btn {
+  flex: 0 0 120px;
+  width: 120px;
+  height: 48px;
+  padding: 0 18px;
+  background: #4e5968;
+  color: #fff;
+  border: 0;
+  border-radius: 8px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s;
 }
 .search-btn:hover { 
   background: #333d4b; 
@@ -583,7 +593,7 @@ textarea.form-control { min-height:150px; padding:13px; resize:vertical; line-he
 .page-btn:hover:not(:disabled) { background: #f2f4f6; border-color: #cbd5e1; }
 .page-btn.active { background: #3182f6; border-color: #3182f6; color: #fff; }
 .page-btn:disabled { color: #ccc; cursor: not-allowed; border-color: #f2f4f6; }
-.write-button { flex-shrink: 0; min-width: 120px; height: 44px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; background: #3182f6; color: #fff; border: 0; border-radius: 8px; font-weight: 700; cursor: pointer; }
+.write-button { flex:0 0 120px; width:120px; min-width:120px; height:48px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; background: #3182f6; color: #fff; border: 0; border-radius: 8px; font-weight: 700; cursor: pointer; }
 .write-button:hover { background: #1b64da; }
 .write-button span { font-size:19px; font-weight:400; }
 
@@ -594,7 +604,9 @@ textarea.form-control { min-height:150px; padding:13px; resize:vertical; line-he
 .like-btn.liked { background: #fff1f0; border-color: #ff4d4f; color: #ff4d4f; }
 .like-btn .heart-icon { font-size: 18px; }
 
-.back-button { margin-bottom:23px; padding:0; border:0; background:transparent; color:#6b7684; cursor:pointer; font-weight:750; }
+.detail-back-footer { width:min(900px,100%); margin:16px auto 0; }
+.back-to-list-button { display:flex; align-items:center; justify-content:center; gap:8px; width:100%; min-height:50px; border:1px solid #3182f6; border-radius:8px; background:#fff; color:#3182f6; box-shadow:0 5px 16px rgba(49,130,246,.12); cursor:pointer; font-weight:800; transition:background .15s ease,color .15s ease,transform .15s ease; }
+.back-to-list-button:hover { background:#3182f6; color:#fff; transform:translateY(-1px); }
 .detail-header { padding-bottom:25px; border-bottom:1px solid #e5e8eb; }
 .detail-header h1 { margin:13px 0 15px; font-size:29px; }
 .post-meta { display:flex; flex-wrap:wrap; gap:8px 18px; color:#8b95a1; font-size:12px; align-items: center; }
@@ -621,10 +633,10 @@ textarea.form-control { min-height:150px; padding:13px; resize:vertical; line-he
   .post-table th,.post-table td { padding:13px 11px; }
   .list-controls { align-items:stretch; flex-direction: column; } 
   .filter-group { flex-direction: column; align-items: stretch; gap: 8px; } .filter-group label { display:none; } .inline-select { min-width:0; }
-  .search-box { max-width: 100%; }
+  .search-box { width:100%; max-width:none; margin-left:0; }
   .list-footer { flex-direction: column-reverse; gap: 16px; align-items: center; }
   .dummy-space { display: none; }
-  .write-button { width: 100%; }
+  .write-button { flex-basis:100%; width:100%; }
   .detail-header h1 { font-size:24px; } .detail-actions { align-items:flex-start; flex-direction:column; }
   @media(max-width:720px) {
   /* ... 기존 모바일 코드 ... */
