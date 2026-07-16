@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <main class="map-page" :class="{ embedded }">
     <section class="map-section">
       <div class="section-heading">
@@ -6,7 +6,6 @@
           <p class="eyebrow">LocalHub</p>
           <h1>서울 관광 지도</h1>
         </div>
-        <p class="section-description">서울의 관광지, 축제, 문화시설, 쇼핑, 숙박 데이터를 지도 위에서 확인하고 카테고리별로 장소를 살펴볼 수 있습니다.</p>
       </div>
 
       <div class="map-layout">
@@ -124,6 +123,7 @@ const isLoading = ref(true)
 const errorMessage = ref('')
 const clusterPixelSize = 64
 const clusterDisableZoom = 16
+const koreaBounds = L.latLngBounds([33.0, 124.0], [38.8, 131.0])
 
 const totalCount = computed(() => places.value.length)
 
@@ -185,12 +185,18 @@ function createMap() {
   map.value = L.map('map', {
     center: [37.5665, 126.9780],
     zoom: 11,
+    minZoom: 7,
+    maxBounds: koreaBounds,
+    maxBoundsViscosity: 1,
     zoomControl: true,
     preferCanvas: true
   })
 
   L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
     maxZoom: 19,
+    minZoom: 7,
+    bounds: koreaBounds,
+    noWrap: true,
     attribution: '&copy; OpenStreetMap contributors &copy; CARTO'
   }).addTo(map.value)
 

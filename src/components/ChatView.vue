@@ -5,9 +5,9 @@
         <div class="chat-heading">
           <span class="guide-avatar" aria-hidden="true">✨</span>
           <div>
-            <p class="chat-status">LOCALHUB AI · 여행 데이터 연결됨</p>
-            <h2>서울 여행 AI 가이드</h2>
-            <p class="chat-sub">가고 싶은 동네와 여행 취향을 편하게 말해보세요.</p>
+            <p class="chat-status">LOCALHUB COURSE AI · 서울 여행 데이터 연결됨</p>
+            <h2>서울 여행 코스 플래너</h2>
+            <p class="chat-sub">여행 시간, 동행, 지역과 취향을 알려주시면 이동 순서까지 계획해드려요.</p>
           </div>
         </div>
         <button class="new-chat" type="button" @click="onClear" title="새로운 대화">↻ <span>새 대화</span></button>
@@ -29,13 +29,13 @@
       <p v-if="errorMessage" class="chat-error">{{ errorMessage }}</p>
 
       <div class="suggestions" aria-label="추천 질문">
-        <button type="button" @click="draft = '오늘 종로에서 갈 만한 곳 추천해줘'">🏯 종로 하루 코스</button>
-        <button type="button" @click="draft = '비 오는 날 가기 좋은 실내 장소 알려줘'">☔ 비 오는 날</button>
-        <button type="button" @click="draft = '서울 야경 명소를 추천해줘'">🌙 서울 야경</button>
+        <button type="button" @click="draft = '토요일 오전 10시부터 종로에서 데이트 코스 짜줘'">🏯 종로 데이트 코스</button>
+        <button type="button" @click="draft = '비 오는 날 친구와 갈 실내 중심 반나절 코스 짜줘'">☔ 비 오는 날</button>
+        <button type="button" @click="draft = '오후 4시부터 시작하는 서울 야경 코스 짜줘'">🌙 서울 야경</button>
       </div>
 
       <footer class="chat-input">
-        <input v-model="draft" type="text" :maxlength="MAX_INPUT_LENGTH" placeholder="어떤 서울 여행을 찾고 있나요?" :disabled="isLoading" aria-label="AI 가이드에게 질문" @keyup.enter="onSend">
+        <input v-model="draft" type="text" :maxlength="MAX_INPUT_LENGTH" placeholder="누구와 언제, 어떤 서울을 여행하고 싶나요?" :disabled="isLoading" aria-label="AI 코스 플래너에게 질문" @keyup.enter="onSend">
         <button class="send" :disabled="isLoading || !draft.trim()" aria-label="메시지 전송" @click="onSend">↑</button>
       </footer>
     </section>
@@ -47,7 +47,7 @@ import { ref, watch, nextTick } from 'vue'
 import { useChat } from '../composables/useChat'
 
 const { embedded } = defineProps({ embedded: { type: Boolean, default: false } })
-const { messages, isLoading, errorMessage, send, clearHistory, MAX_INPUT_LENGTH } = useChat()
+const { messages, isLoading, errorMessage, send, clearHistory, MAX_INPUT_LENGTH } = useChat('trip')
 const draft = ref('')
 const bodyEl = ref(null)
 

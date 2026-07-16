@@ -1,26 +1,10 @@
 import { ref } from 'vue'
 
-/**
- * LocalHub AI 챗봇 공용 로직 (플로팅 위젯 + 챗봇 페이지 공유)
- *
- * 동작 방식
- * 1. public/data 의 서울 권역 JSON 7종을 최초 질문 시 1회 로드해 캐시
- * 2. 사용자 질문에서 키워드를 뽑아 관련 항목만 검색(간이 검색) 후
- *    OpenAI API 호출 시 컨텍스트로 주입 (전체 데이터 전송 시 비용 초과 방지)
- * 3. 커뮤니티 게시글(localStorage 'seoulog_posts')도 함께 검색해 컨텍스트에 포함
- * 4. 대화 히스토리는 localStorage 에 저장해 새로고침에도 유지
- *
- * 제약 준수: 백엔드 없음(브라우저 → OpenAI 직접 호출),
- *            API 키는 .env 의 VITE_OPENAI_API_KEY 로 관리(사용량 제한 키 필수)
- */
-
-const HISTORY_KEY = 'seoulog_chat_history'
-const MAX_INPUT_LENGTH = 300 // 비용 제한: 입력 길이 제한
-const MAX_HISTORY_SENT = 8 // 비용 제한: API 에 보내는 최근 대화 수
+const MAX_INPUT_LENGTH = 300
+const MAX_HISTORY_SENT = 8
 const OPENAI_URL = 'https://api.openai.com/v1/chat/completions'
 const OPENAI_MODEL = 'gpt-5-mini'
 
-// 제공 데이터 파일 ↔ 카테고리 매핑
 const DATA_SOURCES = [
   { file: 'seoul_attractions.json', category: '관광지', keywords: ['관광', '명소', '볼거리', '구경', '공원', '궁'] },
   { file: 'seoul_culture.json', category: '문화시설', keywords: ['문화', '박물관', '미술관', '전시', '공연장'] },
@@ -31,57 +15,91 @@ const DATA_SOURCES = [
   { file: 'seoul_shopping.json', category: '쇼핑', keywords: ['쇼핑', '시장', '백화점', '기념품', '살 곳'] }
 ]
 
-// ---------- 모듈 스코프 공유 상태 (위젯/페이지 어디서든 같은 대화) ----------
+const MODE_CONFIG = {
+  trip: {
+    historyKey: 'localhub_trip_course_history',
+    greeting: '반가워요! 서울 여행 코스 플래너예요. 여행 날짜나 시간, 동행, 원하는 지역과 분위기를 알려주시면 이동 동선을 고려한 코스를 만들어드릴게요.',
+    systemPrompt: [
+      "너는 서울 여행 플랫폼 'LocalHub'의 여행 코스 전문 AI 플래너다.",
+      '규칙:',
+      '1. 제공되는 서울 지역 데이터와 여행자 게시글에 근거해 실제 방문 순서가 있는 코스를 만든다.',
+      '2. 사용자가 기간, 출발 지역, 동행, 관심사 중 일부를 말하지 않았다면 꼭 필요한 조건 1~2가지만 먼저 질문한다.',
+      '3. 코스를 제안할 때 오전·점심·오후·저녁처럼 시간대, 장소, 추천 이유, 다음 장소로의 이동 흐름을 함께 적는다.',
+      '4. 검색 결과에 없는 장소, 주소, 전화번호를 지어내지 않는다. 정보가 부족하면 제공 데이터에서 찾지 못했다고 알린다.',
+      '5. 답변은 한국어로 읽기 쉬운 짧은 목록을 사용하고, 기본 추천은 하루 3~5곳으로 제한한다.',
+      '6. 서울 여행과 무관한 질문에는 여행 코스 추천 역할임을 설명한다.'
+    ].join('\n')
+  },
+  site: {
+    historyKey: 'localhub_site_help_history',
+    greeting: '안녕하세요! LocalHub 이용 도우미예요. 여행지도, 여행톡, AI 코스 추천 등 사이트 사용 중 궁금한 점을 물어보세요.',
+    systemPrompt: [
+      "너는 서울 여행 플랫폼 'LocalHub'의 사이트 이용 도우미다.",
+      'LocalHub 기능:',
+      '- 홈: 주요 기능과 서울 여행 테마를 소개한다.',
+      '- 여행지도: 서울 관광지, 문화시설, 축제, 여행코스, 레포츠, 쇼핑, 숙박을 카테고리별로 탐색한다.',
+      '- 여행톡: 여행자가 글을 등록하고 지역별 경험과 팁을 공유한다. 글 작성 시 설정한 비밀번호로 수정·삭제한다.',
+      '- AI 코스: 여행 시간, 지역, 동행, 취향을 바탕으로 서울 여행 코스를 추천한다.',
+      '규칙:',
+      '1. LocalHub 화면, 메뉴, 사용 방법, 데이터 범위에 관한 질문에만 답한다.',
+      '2. 여행 장소나 코스를 직접 추천하지 말고 상단의 AI 코스 메뉴를 이용하도록 안내한다.',
+      '3. 실제로 존재하지 않는 로그인, 예약, 결제, 저장 기능이 있다고 말하지 않는다.',
+      '4. 답변은 한국어로 1~4문장 이내로 간결하게 작성하고 필요하면 이동할 메뉴 이름을 정확히 알려준다.'
+    ].join('\n')
+  }
+}
 
-const messages = ref(loadHistory())
-const isLoading = ref(false)
-const errorMessage = ref('')
-
-let dataCache = null // [{ category, title, addr, tel }, ...]
+const states = new Map()
+let dataCache = null
 let dataLoadPromise = null
 
-function loadHistory() {
+function initialGreeting(mode) {
+  return { role: 'assistant', content: MODE_CONFIG[mode].greeting }
+}
+
+function loadHistory(mode) {
   try {
-    const saved = JSON.parse(localStorage.getItem(HISTORY_KEY))
+    const saved = JSON.parse(localStorage.getItem(MODE_CONFIG[mode].historyKey))
     if (Array.isArray(saved) && saved.length > 0) return saved
-  } catch (e) {
-    /* 손상된 데이터는 무시하고 초기화 */
+  } catch (error) {
+    // 손상된 기록은 새 대화로 교체한다.
   }
-  return [initialGreeting()]
+  return [initialGreeting(mode)]
 }
 
-function initialGreeting() {
-  return {
-    role: 'assistant',
-    content:
-      '안녕하세요! 서울 지역 정보 가이드 LocalHub AI입니다. 관광지·문화시설·축제·여행코스·레포츠·숙박·쇼핑 정보와 커뮤니티 게시글 검색을 도와드려요. 무엇이 궁금하세요?'
+function getState(mode) {
+  if (!states.has(mode)) {
+    states.set(mode, {
+      messages: ref(loadHistory(mode)),
+      isLoading: ref(false),
+      errorMessage: ref('')
+    })
   }
+  return states.get(mode)
 }
 
-function saveHistory() {
-  localStorage.setItem(HISTORY_KEY, JSON.stringify(messages.value))
+function saveHistory(mode, messages) {
+  localStorage.setItem(MODE_CONFIG[mode].historyKey, JSON.stringify(messages.value))
 }
-
-// ---------- 제공 JSON 데이터 로드 ----------
 
 async function loadAllData() {
   if (dataCache) return dataCache
   if (dataLoadPromise) return dataLoadPromise
 
   dataLoadPromise = Promise.all(
-    DATA_SOURCES.map(async (src) => {
+    DATA_SOURCES.map(async (source) => {
       try {
-        const res = await fetch(`${import.meta.env.BASE_URL}data/${src.file}`)
-        if (!res.ok) return []
-        const json = await res.json()
+        const response = await fetch(import.meta.env.BASE_URL + 'data/' + source.file)
+        if (!response.ok) return []
+        const json = await response.json()
         return (json.items || []).map((item) => ({
-          category: src.category,
+          category: source.category,
           title: item.title || '',
           addr: item.addr1 || '',
           tel: item.tel || ''
         }))
-      } catch (e) {
-        console.error(`[LocalHub] 데이터 로드 실패: ${src.file}`, e)
+      } catch (error) {
+        console.error('[LocalHub] 데이터 로드 실패: ' + source.file, error)
         return []
       }
     })
@@ -93,27 +111,21 @@ async function loadAllData() {
   return dataLoadPromise
 }
 
-// ---------- 간이 키워드 검색 (컨텍스트 구성) ----------
-
 function tokenize(text) {
-  return text
-    .toLowerCase()
-    .split(/[\s,.!?~·]+/)
-    .map((t) => t.trim())
-    .filter((t) => t.length >= 2)
+  return text.toLowerCase().split(/[\s,.!?~·]+/).map((token) => token.trim()).filter((token) => token.length >= 2)
 }
 
 function detectCategories(query) {
   return DATA_SOURCES.filter(
-    (src) => src.keywords.some((k) => query.includes(k)) || query.includes(src.category)
-  ).map((src) => src.category)
+    (source) => source.keywords.some((keyword) => query.includes(keyword)) || query.includes(source.category)
+  ).map((source) => source.category)
 }
 
 function searchPlaces(query, allItems) {
   const tokens = tokenize(query)
   const boostCategories = detectCategories(query)
 
-  const scored = allItems
+  return allItems
     .map((item) => {
       let score = 0
       for (const token of tokens) {
@@ -123,146 +135,153 @@ function searchPlaces(query, allItems) {
       if (boostCategories.includes(item.category)) score += 2
       return { item, score }
     })
-    .filter((s) => s.score > 0)
+    .filter((result) => result.score > 0)
     .sort((a, b) => b.score - a.score)
-
-  return scored.slice(0, 12).map((s) => s.item)
+    .slice(0, 18)
+    .map((result) => result.item)
 }
 
 function searchPosts(query) {
-  let posts = []
   try {
-    posts = JSON.parse(localStorage.getItem('seoulog_posts')) || []
-  } catch (e) {
+    const posts = JSON.parse(localStorage.getItem('seoulog_posts')) || []
+    const tokens = tokenize(query)
+    return posts
+      .filter((post) => tokens.some((token) => (post.title + ' ' + post.content).toLowerCase().includes(token)))
+      .slice(0, 4)
+      .map((post) => ({ category: post.category, title: post.title, content: post.content.slice(0, 140) }))
+  } catch (error) {
     return []
   }
-  const tokens = tokenize(query)
-  return posts
-    .filter((p) => tokens.some((t) => (p.title + ' ' + p.content).toLowerCase().includes(t)))
-    .slice(0, 3)
-    .map((p) => ({ category: p.category, title: p.title, content: p.content.slice(0, 120) }))
 }
 
-function buildContext(places, posts) {
+function buildTripContext(places, posts) {
   const lines = []
   if (places.length > 0) {
     lines.push('[서울 지역 데이터 검색 결과]')
-    for (const p of places) {
-      lines.push(
-        `- (${p.category}) ${p.title} | 주소: ${p.addr || '정보 없음'}${p.tel ? ` | 전화: ${p.tel}` : ''}`
-      )
+    for (const place of places) {
+      lines.push('- (' + place.category + ') ' + place.title + ' | 주소: ' + (place.addr || '정보 없음') + (place.tel ? ' | 전화: ' + place.tel : ''))
     }
   }
   if (posts.length > 0) {
-    lines.push('[커뮤니티 게시글 검색 결과]')
-    for (const p of posts) {
-      lines.push(`- (${p.category}) ${p.title}: ${p.content}`)
-    }
+    lines.push('[여행톡 검색 결과]')
+    for (const post of posts) lines.push('- (' + post.category + ') ' + post.title + ': ' + post.content)
   }
-  if (lines.length === 0) {
-    lines.push('[검색 결과 없음] 질문과 일치하는 데이터를 찾지 못했습니다.')
-  }
+  if (lines.length === 0) lines.push('[검색 결과 없음] 조건과 일치하는 장소를 제공 데이터에서 찾지 못했습니다.')
   return lines.join('\n')
 }
 
-const SYSTEM_PROMPT = `너는 서울 지역 정보 커뮤니티 'LocalHub'의 AI 가이드다.
-규칙:
-1. 반드시 함께 제공되는 [검색 결과] 데이터에 근거해서만 장소·행사를 안내한다. 데이터에 없는 장소를 지어내지 않는다.
-2. 검색 결과가 없거나 부족하면 솔직하게 "제공 데이터에서 찾지 못했다"고 안내하고, 다른 질문 방법을 제안한다.
-3. 답변은 한국어로, 간결하게(2~5문장 또는 짧은 목록). 추천은 2~3곳으로 압축한다.
-4. 주소·전화번호는 데이터에 있는 값만 사용한다.
-5. 서울 지역 정보와 무관한 질문(코딩, 정치 등)에는 서울 여행/지역 정보 안내 역할임을 알리고 정중히 거절한다.`
+function getLocalSiteAnswer(query) {
+  const text = query.toLowerCase()
+  if (/지도|장소|관광지|축제|숙박|쇼핑/.test(text)) {
+    return '상단의 ‘여행지도’에서 카테고리를 선택하면 서울의 관광지, 문화시설, 축제, 쇼핑, 숙박 정보를 지도와 목록으로 확인할 수 있어요.'
+  }
+  if (/글|게시|여행톡|수정|삭제|비밀번호/.test(text)) {
+    return '‘여행톡’에서 지역을 선택해 글을 작성할 수 있어요. 작성할 때 입력한 비밀번호가 있어야 해당 글을 수정하거나 삭제할 수 있습니다.'
+  }
+  if (/코스|추천|일정|ai/.test(text)) {
+    return '상단의 ‘AI 코스’로 이동해 여행 시간, 지역, 동행, 취향을 알려주세요. 조건에 맞춰 이동 순서가 포함된 서울 여행 코스를 추천해드려요.'
+  }
+  if (/로그인|회원|가입/.test(text)) {
+    return 'LocalHub는 현재 별도 로그인이나 회원가입 없이 지도와 AI 코스를 이용할 수 있어요. 여행톡 글은 작성 시 설정한 비밀번호로 관리합니다.'
+  }
+  if (/예약|결제|구매/.test(text)) {
+    return 'LocalHub는 여행 정보를 탐색하는 서비스로, 현재 사이트 안에서 예약이나 결제는 지원하지 않습니다.'
+  }
+  if (/사용|기능|메뉴|뭐|무엇/.test(text)) {
+    return 'LocalHub에서는 ‘여행지도’로 장소를 찾고, ‘여행톡’에서 경험을 나누며, ‘AI 코스’에서 맞춤 여행 일정을 추천받을 수 있어요.'
+  }
+  return ''
+}
 
-// ---------- OpenAI 호출 ----------
-
-async function callOpenAI(userQuery, context) {
+async function callOpenAI(mode, state, userQuery, context) {
   const apiKey = import.meta.env.VITE_OPENAI_API_KEY
   if (!apiKey) {
-    throw new Error(
-      'API 키가 설정되지 않았습니다. .env 파일에 VITE_OPENAI_API_KEY를 추가한 뒤 개발 서버를 재시작해 주세요.'
-    )
+    throw new Error('API 키가 설정되지 않았습니다. .env 파일에 VITE_OPENAI_API_KEY를 추가한 뒤 개발 서버를 재시작해 주세요.')
   }
 
-  // 최근 대화만 발췌 (첫 인사말 제외, 마지막 사용자 메시지는 컨텍스트와 합쳐 전송)
-  const recentHistory = messages.value
+  const recentHistory = state.messages.value
     .slice(1)
     .slice(-MAX_HISTORY_SENT)
-    .map((m) => ({ role: m.role, content: m.content }))
+    .map((message) => ({ role: message.role, content: message.content }))
 
-  const res = await fetch(OPENAI_URL, {
+  const response = await fetch(OPENAI_URL, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${apiKey}`
-    },
+    headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + apiKey },
     body: JSON.stringify({
       model: OPENAI_MODEL,
-      // gpt-5 계열: max_tokens 대신 max_completion_tokens 사용, temperature 커스텀 미지원(기본값 1 고정)
-      // 추론(reasoning) 토큰도 이 한도에서 차감되므로 여유 있게 설정하고, reasoning_effort 최소화로 비용 절감
-      max_completion_tokens: 1200,
+      max_completion_tokens: 1400,
       reasoning_effort: 'minimal',
       messages: [
-        { role: 'system', content: SYSTEM_PROMPT },
+        { role: 'system', content: MODE_CONFIG[mode].systemPrompt },
         ...recentHistory.slice(0, -1),
-        {
-          role: 'user',
-          content: `${context}\n\n[사용자 질문]\n${userQuery}`
-        }
+        { role: 'user', content: context + '\n\n[사용자 질문]\n' + userQuery }
       ]
     })
   })
 
-  if (!res.ok) {
-    if (res.status === 401) throw new Error('API 키가 유효하지 않습니다. 키 값을 확인해 주세요.')
-    if (res.status === 429) throw new Error('요청 한도를 초과했습니다. 잠시 후 다시 시도해 주세요.')
-    throw new Error(`OpenAI 응답 오류 (${res.status})`)
+  if (!response.ok) {
+    if (response.status === 401) throw new Error('API 키가 유효하지 않습니다. 키 값을 확인해 주세요.')
+    if (response.status === 429) throw new Error('요청 한도를 초과했습니다. 잠시 후 다시 시도해 주세요.')
+    throw new Error('OpenAI 응답 오류 (' + response.status + ')')
   }
 
-  const data = await res.json()
+  const data = await response.json()
   return data.choices?.[0]?.message?.content?.trim() || '죄송해요, 답변을 생성하지 못했습니다.'
 }
 
-// ---------- 외부 공개 API ----------
+export function useChat(mode = 'trip') {
+  if (!MODE_CONFIG[mode]) throw new Error('지원하지 않는 채팅 모드입니다: ' + mode)
+  const state = getState(mode)
 
-export function useChat() {
   const send = async (rawText) => {
     const text = (rawText || '').trim()
-    if (!text || isLoading.value) return
+    if (!text || state.isLoading.value) return
 
     if (text.length > MAX_INPUT_LENGTH) {
-      errorMessage.value = `질문은 ${MAX_INPUT_LENGTH}자 이내로 입력해 주세요.`
+      state.errorMessage.value = '질문은 ' + MAX_INPUT_LENGTH + '자 이내로 입력해 주세요.'
       return
     }
 
-    errorMessage.value = ''
-    messages.value.push({ role: 'user', content: text })
-    saveHistory()
-    isLoading.value = true
+    state.errorMessage.value = ''
+    state.messages.value.push({ role: 'user', content: text })
+    saveHistory(mode, state.messages)
 
+    const localAnswer = mode === 'site' ? getLocalSiteAnswer(text) : ''
+    if (localAnswer) {
+      state.messages.value.push({ role: 'assistant', content: localAnswer })
+      saveHistory(mode, state.messages)
+      return
+    }
+
+    state.isLoading.value = true
     try {
-      const allItems = await loadAllData()
-      const places = searchPlaces(text, allItems)
-      const posts = searchPosts(text)
-      const context = buildContext(places, posts)
-
-      const answer = await callOpenAI(text, context)
-      messages.value.push({ role: 'assistant', content: answer })
-    } catch (e) {
-      messages.value.push({
-        role: 'assistant',
-        content: `⚠️ ${e.message || '알 수 없는 오류가 발생했습니다.'}`
-      })
+      let context = '[LocalHub 사이트 기능 안내에 따라 답변하세요.]'
+      if (mode === 'trip') {
+        const allItems = await loadAllData()
+        context = buildTripContext(searchPlaces(text, allItems), searchPosts(text))
+      }
+      const answer = await callOpenAI(mode, state, text, context)
+      state.messages.value.push({ role: 'assistant', content: answer })
+    } catch (error) {
+      state.messages.value.push({ role: 'assistant', content: '⚠️ ' + (error.message || '알 수 없는 오류가 발생했습니다.') })
     } finally {
-      isLoading.value = false
-      saveHistory()
+      state.isLoading.value = false
+      saveHistory(mode, state.messages)
     }
   }
 
   const clearHistory = () => {
-    messages.value = [initialGreeting()]
-    saveHistory()
-    errorMessage.value = ''
+    state.messages.value = [initialGreeting(mode)]
+    saveHistory(mode, state.messages)
+    state.errorMessage.value = ''
   }
 
-  return { messages, isLoading, errorMessage, send, clearHistory, MAX_INPUT_LENGTH }
+  return {
+    messages: state.messages,
+    isLoading: state.isLoading,
+    errorMessage: state.errorMessage,
+    send,
+    clearHistory,
+    MAX_INPUT_LENGTH
+  }
 }

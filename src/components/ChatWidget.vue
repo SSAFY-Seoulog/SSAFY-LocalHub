@@ -1,12 +1,12 @@
 <template>
   <div class="chat-widget">
-    <button v-if="!isOpen" class="fab" aria-label="LocalHub AI 여행 가이드 열기" title="AI 여행 가이드" @click="isOpen = true">
+    <button v-if="!isOpen" class="fab" aria-label="LocalHub 이용 도우미 열기" title="LocalHub 이용 도우미" @click="isOpen = true">
       <span class="fab-spark">✦</span><strong>L</strong><span class="fab-badge">AI</span>
     </button>
 
-    <div v-else class="chat-panel" role="dialog" aria-label="LocalHub AI 여행 가이드">
+    <div v-else class="chat-panel" role="dialog" aria-label="LocalHub 이용 도우미">
       <header class="panel-header">
-        <div class="panel-brand"><span class="panel-logo">L</span><span><strong>AI 여행 가이드</strong><small><i></i> 지금 바로 물어보세요</small></span></div>
+        <div class="panel-brand"><span class="panel-logo">L</span><span><strong>LocalHub 이용 도우미</strong><small><i></i> 사이트 사용법을 물어보세요</small></span></div>
         <div class="panel-actions">
           <button class="icon-btn" title="대화 초기화" aria-label="대화 초기화" @click="onClear">↻</button>
           <button class="icon-btn" title="닫기" aria-label="닫기" @click="isOpen = false">×</button>
@@ -16,9 +16,10 @@
         <div v-for="(msg, i) in messages" :key="i" class="bubble" :class="msg.role">{{ msg.content }}</div>
         <div v-if="isLoading" class="bubble assistant typing"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
       </div>
+      <div class="help-suggestions" aria-label="자주 묻는 질문"><button type="button" @click="draft = '여행지도는 어떻게 사용해?'">지도 사용법</button><button type="button" @click="draft = '여행톡 글은 어떻게 수정해?'">글 수정 방법</button><button type="button" @click="draft = 'AI 코스는 무슨 기능이야?'">AI 코스 안내</button></div>
       <p v-if="errorMessage" class="panel-error">{{ errorMessage }}</p>
       <footer class="panel-input">
-        <input v-model="draft" type="text" :maxlength="MAX_INPUT_LENGTH" placeholder="서울 여행을 물어보세요" :disabled="isLoading" @keyup.enter="onSend">
+        <input v-model="draft" type="text" :maxlength="MAX_INPUT_LENGTH" placeholder="LocalHub 사용법을 물어보세요" :disabled="isLoading" @keyup.enter="onSend">
         <button class="send-btn" :disabled="isLoading || !draft.trim()" aria-label="전송" @click="onSend">↑</button>
       </footer>
     </div>
@@ -28,7 +29,7 @@
 <script setup>
 import { ref, watch, nextTick } from 'vue'
 import { useChat } from '../composables/useChat'
-const { messages, isLoading, errorMessage, send, clearHistory, MAX_INPUT_LENGTH } = useChat()
+const { messages, isLoading, errorMessage, send, clearHistory, MAX_INPUT_LENGTH } = useChat('site')
 const isOpen = ref(false)
 const draft = ref('')
 const bodyEl = ref(null)
@@ -65,6 +66,10 @@ const onClear = () => { if (confirm('대화 내용을 모두 지울까요?')) cl
 .dot { width:6px; height:6px; border-radius:50%; background:#8b95a1; animation:blink 1.2s infinite; }
 .dot:nth-child(2){animation-delay:.2s}.dot:nth-child(3){animation-delay:.4s}
 @keyframes blink { 0%,80%,100%{opacity:.25}40%{opacity:1} }
+.help-suggestions { display:flex; gap:6px; overflow-x:auto; padding:9px 12px 0; background:#fff; scrollbar-width:none; }
+.help-suggestions::-webkit-scrollbar { display:none; }
+.help-suggestions button { flex:0 0 auto; min-height:29px; padding:0 9px; border:1px solid #e5e8eb; border-radius:999px; background:#fff; color:#4e5968; cursor:pointer; font-size:10px; }
+.help-suggestions button:hover { border-color:#9ec5ff; background:#f4f8ff; color:#1b64da; }
 .panel-error { margin:0; padding:7px 14px; background:#fff1f0; color:#d14343; font-size:11px; }
 .panel-input { display:flex; gap:8px; padding:11px 12px; border-top:1px solid #e5e8eb; background:#fff; }
 .panel-input input { flex:1; min-width:0; height:42px; padding:0 12px; border:1px solid #d1d6db; border-radius:8px; background:#f9fafb; font-size:13px; }
