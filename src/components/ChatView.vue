@@ -62,9 +62,39 @@ const onClear = () => { if (confirm('대화 내용을 모두 지울까요?')) cl
 </script>
 
 <style scoped>
-.chat-page { min-height:calc(100vh - 68px); display:flex; padding:48px 20px 70px; background:#f2f6fb; }
-.chat-page.embedded { height:100%; min-height:0; padding:0; }
-.chat-main { display:flex; flex-direction:column; width:min(980px,100%); height:720px; min-height:0; margin:auto; overflow:hidden; border:1px solid #e5e8eb; border-radius:8px; background:#fff; box-shadow:0 18px 45px rgba(15,23,42,.1); }
+.chat-page { 
+  /* 헤더(68px)와 하단 푸터(약 120px)를 감안해 가용 높이를 타이트하게 조정 */
+  height: 100%; 
+  display: flex; 
+  align-items: center; /* 세로 중앙 정렬로 예쁘게 배치 */
+  justify-content: center;
+  padding: 140px; /* 기존 상하 패딩(48px, 70px)을 줄여 푸터가 올라올 공간 확보 */
+  background: #f2f6fb; 
+  box-sizing: border-box;
+}
+.chat-page.embedded { 
+  height: 100%; 
+  min-height: 0; 
+  padding: 0; 
+}
+.chat-main { 
+  display: flex; 
+  flex-direction: column; 
+  width: 100%;
+  max-width:1000px;         /* 너무 과하게 커지지 않도록 최대 가로 폭 제한 */
+  aspect-ratio: 1 / 0.7;      /* 가로세로 1:1 비율을 강제 부여 */
+  
+  /* 반응형 안전장치: 화면 높이가 작아도 터지지 않게 조절 */
+  max-height: calc(100vh - 68px - 140px - 48px);
+  min-height: 0; 
+  margin: 0 auto; /* 좌우 중앙 정렬 */
+  overflow: hidden; 
+  border: 1px solid #e5e8eb; 
+  border-radius: 8px; 
+  background: #fff; 
+  box-sizing: border-box;
+  box-shadow: 0 18px 45px rgba(15, 23, 42, .1); 
+}
 .embedded .chat-main { width:100%; height:100%; border:0; border-radius:0; box-shadow:none; }
 .chat-header { display:flex; align-items:center; justify-content:space-between; gap:20px; padding:22px 26px; border-bottom:1px solid #e5e8eb; }
 .chat-heading { display:flex; align-items:center; gap:14px; min-width:0; }

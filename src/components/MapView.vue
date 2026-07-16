@@ -370,7 +370,7 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
-.map-page { width:100%; min-height:calc(100vh - 68px); background:#f7f8fa; }
+.map-page { width:100%; height: 100%; background:#f7f8fa; }
 .map-section { width:min(1320px,calc(100% - 40px)); margin:0 auto; padding:48px 0 76px; }
 .section-heading { display:flex; align-items:flex-end; justify-content:space-between; gap:50px; margin-bottom:28px; }
 .section-heading h1 { margin:0; font-size:36px; line-height:1.25; }
